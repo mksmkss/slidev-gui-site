@@ -3,31 +3,35 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Slidev GUI — スライドを、見たまま直す。中身はテキストのまま。</title>
+    <title>Slidev GUI</title>
     <meta
       name="description"
-      content="PowerPoint のように見たまま直せて、保存されるのは読めるテキスト（slides.md）。Slidev のための GUI エディタ。"
+      content="PowerPoint のように画面の上でスライドを作れる、Slidev 用のエディタ。保存されるのは 1 つのテキストファイルです。"
     />
     <style>
+      /* 配置: 12 列の格子に左揃え。見せ場は「動画（見た目）と slides.md（中身）を並べる」1 か所だけ。ほかは罫線と余白で区切る */
       :root {
         --bg: #ffffff;
         --ink: #111111;
         --muted: #595959;
         --line: #e0e0e0;
-        --sunk: #f2f2f2;
+        --sunk: #f4f4f2;
         /* 差し色とフォントは仮（アプリの CSS 変数と同じ値。ここを変えれば全体が変わる） */
         --accent: #0047ab;
         --on-accent: #ffffff;
+        --add: #e6eefb;
         --font: 'Inter', 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', system-ui, sans-serif;
         --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
         --radius: 6px;
         --w: 1120px;
+        color-scheme: light;
       }
       * {
         box-sizing: border-box;
       }
       html {
         -webkit-text-size-adjust: 100%;
+        scroll-behavior: smooth;
       }
       body {
         margin: 0;
@@ -35,74 +39,88 @@
         color: var(--ink);
         font-family: var(--font);
         font-size: 16px;
-        line-height: 1.7;
+        line-height: 1.8;
+        /* 日本語は文節の切れ目で折り返す（対応していないブラウザでは、ふつうの折り返し） */
+        word-break: auto-phrase;
+        line-break: strict;
+        overflow-wrap: anywhere;
+      }
+      /* 見出しと短い文は、決めた切れ目（wbr）でだけ折り返す */
+      h1,
+      h2,
+      h3,
+      .tx,
+      dt {
+        word-break: keep-all;
+        text-wrap: balance;
+      }
+      p,
+      dd {
+        text-wrap: pretty;
       }
       .wrap {
         max-width: var(--w);
         margin: 0 auto;
         padding: 0 24px;
       }
-      header.top {
+      a {
+        color: var(--ink);
+        text-underline-offset: 3px;
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      /* 上の帯 */
+      .top {
         border-bottom: 1px solid var(--line);
       }
-      header.top .wrap {
+      .top .wrap {
         display: flex;
         align-items: center;
         justify-content: space-between;
         min-height: 56px;
       }
-      header.top b {
+      .top b {
         font-size: 16px;
+        letter-spacing: 0.01em;
       }
-      header.top nav {
-        display: flex;
-        gap: 24px;
-      }
-      a {
-        color: var(--ink);
-        text-underline-offset: 3px;
-      }
-      header.top a {
+      .top a {
         display: inline-flex;
         align-items: center;
         min-height: 40px;
+        padding: 0 16px;
+        border-radius: var(--radius);
+        background: var(--accent);
+        color: var(--on-accent);
         font-size: 14px;
+        font-weight: 700;
         text-decoration: none;
       }
-      header.top a:hover {
-        text-decoration: underline;
-      }
-      a:focus-visible,
-      video:focus-visible {
-        outline: 2px solid var(--accent);
-        outline-offset: 2px;
-      }
+
+      /* 導入 */
       .hero {
         display: grid;
         grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-        gap: 48px;
+        gap: 56px;
         align-items: center;
-        padding: 72px 0 64px;
+        padding: 72px 0;
       }
       h1 {
         margin: 0 0 24px;
-        font-size: 44px;
-        line-height: 1.25;
+        font-size: clamp(32px, 4.4vw, 48px);
+        line-height: 1.3;
         letter-spacing: -0.01em;
       }
       .lead {
-        margin: 0 0 32px;
-        color: var(--muted);
-        font-size: 18px;
-      }
-      .status {
-        display: inline-block;
         margin: 0;
-        padding: 8px 12px;
-        border: 1px solid var(--line);
-        border-radius: var(--radius);
+        max-width: 30em;
         color: var(--muted);
-        font-size: 14px;
+        font-size: 17px;
+      }
+      .stage {
+        margin: 0;
       }
       video {
         display: block;
@@ -113,140 +131,242 @@
         border: 1px solid var(--line);
         border-radius: var(--radius);
       }
+
       section {
-        padding: 64px 0;
+        padding: 72px 0;
         border-top: 1px solid var(--line);
       }
       h2 {
-        margin: 0 0 8px;
+        margin: 0 0 32px;
         font-size: 28px;
-        line-height: 1.35;
-      }
-      .sub {
-        margin: 0 0 40px;
-        color: var(--muted);
-      }
-      .points {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 32px 48px;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-      .points h3 {
-        margin: 0 0 8px;
-        padding-top: 16px;
-        border-top: 2px solid var(--ink);
-        font-size: 18px;
         line-height: 1.4;
       }
-      .points p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 14px;
+
+      /* 12 の操作: 左に一覧、右に動画 */
+      .viewer {
+        display: grid;
+        grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+        gap: 40px;
+        align-items: start;
       }
       .clips {
-        display: grid;
-        /* 動画の中の字が読める大きさにするため 2 列 */
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 48px 32px;
         margin: 0;
         padding: 0;
         list-style: none;
+        border-top: 1px solid var(--line);
       }
-      .clips h3 {
+      .clips li {
+        border-bottom: 1px solid var(--line);
+      }
+      .clip {
         display: flex;
-        gap: 8px;
-        margin: 12px 0 4px;
-        font-size: 16px;
-        line-height: 1.45;
+        align-items: baseline;
+        gap: 12px;
+        width: 100%;
+        min-height: 48px;
+        padding: 10px 8px;
+        border: 0;
+        background: none;
+        color: var(--ink);
+        font: inherit;
+        font-size: 15px;
+        line-height: 1.5;
+        text-align: left;
+        cursor: pointer;
+      }
+      .clip:hover {
+        background: var(--sunk);
+      }
+      .clip[aria-pressed='true'] {
+        background: var(--ink);
+        color: var(--on-accent);
       }
       .no {
         flex: none;
+        width: 1.6em;
         color: var(--muted);
         font-family: var(--mono);
-        font-weight: 400;
+        font-size: 13px;
       }
-      .how {
-        margin: 0 0 0 28px;
-        color: var(--muted);
-        font-family: var(--mono);
-        font-size: 12px;
+      .clip[aria-pressed='true'] .no {
+        color: inherit;
       }
-      .steps {
-        display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 48px;
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        counter-reset: s;
+      .viewer .stage {
+        position: sticky;
+        top: 24px;
       }
-      .steps li {
-        counter-increment: s;
-      }
-      .steps li::before {
-        content: counter(s);
-        display: block;
-        margin-bottom: 8px;
-        color: var(--accent);
-        font-family: var(--mono);
-        font-size: 28px;
-        font-weight: 700;
-        line-height: 1;
-      }
-      .steps h3 {
-        margin: 0 0 8px;
-        font-size: 18px;
-      }
-      .steps p {
-        margin: 0;
+      .cap {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        min-height: 28px;
+        margin: 12px 0 0;
         color: var(--muted);
         font-size: 14px;
       }
+      .cap kbd {
+        font-family: var(--mono);
+        font-size: 13px;
+      }
+
+      /* 中身: 文と、保存されるテキスト */
+      .two {
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        gap: 56px;
+        align-items: start;
+      }
+      .two p {
+        margin: 0 0 16px;
+        max-width: 28em;
+      }
       pre {
         margin: 0;
-        padding: 20px 24px;
+        padding: 20px 0;
         overflow-x: auto;
         background: var(--sunk);
         border-radius: var(--radius);
         font-family: var(--mono);
         font-size: 14px;
-        line-height: 1.7;
+        line-height: 1.75;
+        word-break: normal;
+        overflow-wrap: normal;
       }
-      .two {
+      pre code {
+        display: block;
+        min-width: max-content;
+      }
+      pre span {
+        display: block;
+        padding: 0 24px;
+        min-height: 1.75em;
+      }
+      pre .hl {
+        background: var(--add);
+        box-shadow: inset 3px 0 0 var(--accent);
+      }
+
+      /* ほかにできること: 用語と 1 文の行 */
+      dl {
         display: grid;
-        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-        gap: 48px;
-        align-items: start;
+        grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+        margin: 0;
+        border-top: 1px solid var(--line);
+      }
+      dt,
+      dd {
+        margin: 0;
+        padding: 20px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      dt {
+        padding-right: 24px;
+        font-weight: 700;
+      }
+      dd {
+        color: var(--muted);
+      }
+
+      /* 入手 */
+      .get p {
+        margin: 0 0 16px;
+        max-width: 34em;
+      }
+      .cmd {
+        display: flex;
+        align-items: stretch;
+        max-width: 760px;
+        margin: 0 0 16px;
+        border: 1px solid var(--ink);
+        border-radius: var(--radius);
+        overflow: hidden;
+      }
+      .cmd code {
+        flex: 1;
+        min-width: 0;
+        padding: 14px 16px;
+        overflow-x: auto;
+        font-family: var(--mono);
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: nowrap;
+        word-break: normal;
+        overflow-wrap: normal;
+      }
+      .cmd button {
+        flex: none;
+        min-width: 88px;
+        min-height: 48px;
+        padding: 0 16px;
+        border: 0;
+        border-left: 1px solid var(--ink);
+        background: var(--ink);
+        color: var(--on-accent);
+        font: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 14px;
       }
       footer {
         padding: 32px 0 48px;
         border-top: 1px solid var(--line);
         color: var(--muted);
-        font-size: 12px;
+        font-size: 13px;
       }
+      footer p {
+        margin: 0;
+      }
+
       @media (max-width: 860px) {
         .hero,
-        .two,
-        .points,
-        .clips,
-        .steps {
+        .viewer,
+        .two {
           grid-template-columns: minmax(0, 1fr);
-        }
-        .hero {
-          padding: 40px 0;
           gap: 32px;
         }
-        h1 {
-          font-size: 32px;
+        .hero {
+          padding: 40px 0 48px;
         }
         section {
           padding: 48px 0;
         }
-        header.top nav a:not(:last-child) {
-          display: none;
+        h2 {
+          margin-bottom: 24px;
+          font-size: 24px;
+        }
+        /* 動画を先に、一覧をその下に。動画は画面の上に残す */
+        .viewer .stage {
+          order: -1;
+          top: 0;
+          padding: 8px 0;
+          background: var(--bg);
+          z-index: 1;
+        }
+        dl {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        dt {
+          padding-bottom: 0;
+          border-bottom: 0;
+        }
+        dd {
+          padding-top: 4px;
+        }
+      }
+      @media (max-width: 480px) {
+        .wrap {
+          padding: 0 16px;
+        }
+        .cmd {
+          flex-direction: column;
+        }
+        .cmd button {
+          border-left: 0;
+          border-top: 1px solid var(--ink);
         }
       }
     </style>
@@ -255,293 +375,310 @@
     <header class="top">
       <div class="wrap">
         <b>Slidev GUI</b>
-        <nav aria-label="このページの中">
-          <a href="#points">できること</a>
-          <a href="#clips">工夫</a>
-          <a href="#start">始め方</a>
-        </nav>
+        <a href="#get">入手する</a>
       </div>
     </header>
 
     <main class="wrap">
       <div class="hero">
         <div>
-          <h1>スライドを、見たまま直す。<br />中身はテキストのまま。</h1>
+          <h1>見たまま直せて、<wbr />中身はテキスト。</h1>
           <p class="lead">
-            PowerPoint と同じように、置いて、動かして、その場で書く。保存されるのは、人にも AI
-            にも読める 1 つのテキスト。
+            Slidev
+            GUI&nbsp;は、PowerPoint&nbsp;と同じように画面の上でスライドを作れるエディタです。保存されるのは
+            1&nbsp;つのテキストファイルなので、変更の履歴が読め、AI&nbsp;にもそのまま渡せます。
           </p>
-          <p class="status">Mac 版を準備中です（配布はまだ始まっていません）</p>
         </div>
-        <video
-          src="clips/03-gap.webm"
-          muted
-          loop
-          playsinline
-          autoplay
-          aria-label="すき間をつまむと、全部の間が一緒に変わる"
-        ></video>
+        <figure class="stage">
+          <video
+            src="clips/03-gap.webm"
+            muted
+            loop
+            playsinline
+            autoplay
+            aria-label="3&nbsp;つの箱の間のつまみを引くと、すき間が一緒に変わる"
+          ></video>
+        </figure>
       </div>
 
-      <section id="points">
-        <h2>できること</h2>
-        <p class="sub">PowerPoint の操作感に、テキストの良さを足しました。</p>
-        <ul class="points">
-          <li>
-            <h3>見たまま、その場で直す</h3>
-            <p>発表で映る画面そのものの上で、文字を書き、図形を置き、引いて動かします。</p>
-          </li>
-          <li>
-            <h3>中身は 1 つのテキスト</h3>
-            <p>
-              保存されるのは slides.md。直した所だけが変わるので、変更の履歴が読め、ほかのエディタや
-              AI と一緒に使えます。
-            </p>
-          </li>
-          <li>
-            <h3>研究室のテーマをそのまま</h3>
-            <p>章の扉、ヘッダー、強調、数式、引用。テーマ gtlabo の部品を名前で呼んで置けます。</p>
-          </li>
-          <li>
-            <h3>章で扱う</h3>
-            <p>章ごと入れ替える、付録へ送る、章の題を 1 か所で直す。長い発表でも迷いません。</p>
-          </li>
-          <li>
-            <h3>AI に頼んで、見比べてから決める</h3>
-            <p>文で頼むと、変更前と変更後が並びます。良ければ適用、違えばやめるだけ。</p>
-          </li>
-          <li>
-            <h3>PDF・PowerPoint・画像に書き出す</h3>
-            <p>配る資料や、PowerPoint が必要な場面にも、そのまま出せます。</p>
-          </li>
-        </ul>
-      </section>
-
       <section id="clips">
-        <h2>PowerPoint には無い、12 の工夫</h2>
-        <p class="sub">どれも数秒です。動画は、実際のアプリを動かして録ったものです。</p>
-        <ol class="clips">
-          <li>
+        <h2>PowerPoint&nbsp;にない<wbr /> 12 の操作</h2>
+        <div class="viewer">
+          <ol class="clips">
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="01-tools"
+                data-how="T　R　O　L"
+                aria-pressed="true"
+              >
+                <span class="no">01</span>
+                <span class="tx">キー 1&nbsp;つで<wbr />道具を持ち替える</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="02-width"
+                data-how="⌥1 – ⌥5"
+                aria-pressed="false"
+              >
+                <span class="no">02</span>
+                <span class="tx">幅を 1/4・1/3・1/2・<wbr />2/3・全幅にそろえる</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="03-gap"
+                data-how="3&nbsp;つ選んで、間のつまみを引く"
+                aria-pressed="false"
+              >
+                <span class="no">03</span>
+                <span class="tx">すき間をつまむと、<wbr />全部の間が<wbr />一緒に変わる</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="04-swap"
+                data-how="3&nbsp;つ選んで、1&nbsp;つを引く"
+                aria-pressed="false"
+              >
+                <span class="no">04</span>
+                <span class="tx">引きずって<wbr />入れ替える</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="05-snap"
+                data-how="動かすだけ"
+                aria-pressed="false"
+              >
+                <span class="no">05</span>
+                <span class="tx">隣と同じ間隔で<wbr />止まる</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="06-highlight"
+                data-how="文字を選ぶ"
+                aria-pressed="false"
+              >
+                <span class="no">06</span>
+                <span class="tx">語を選んで、<wbr />すぐ下で色を選ぶ</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="07-math"
+                data-how="$x_1$ と打つ"
+                aria-pressed="false"
+              >
+                <span class="no">07</span>
+                <span class="tx">$ で囲むと<wbr />数式になる</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="08-palette"
+                data-how="⌘K"
+                aria-pressed="false"
+              >
+                <span class="no">08</span>
+                <span class="tx">部品を<wbr />名前で呼ぶ</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="09-chapters"
+                data-how="章の見出しを引く・二重クリック"
+                aria-pressed="false"
+              >
+                <span class="no">09</span>
+                <span class="tx"
+                  >章ごと入れ替える。<wbr />題は 1&nbsp;か所直せば<wbr />全部変わる</span
+                >
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="10-appendix"
+                data-how="右クリック →「ほかの章へ移す」"
+                aria-pressed="false"
+              >
+                <span class="no">10</span>
+                <span class="tx">付録へ送る</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="11-ai"
+                data-how="⌘J"
+                aria-pressed="false"
+              >
+                <span class="no">11</span>
+                <span class="tx">AI&nbsp;に文で頼み、<wbr />前後を見比べて<wbr />適用する</span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                class="clip"
+                data-clip="12-text"
+                data-how="slides.md"
+                aria-pressed="false"
+              >
+                <span class="no">12</span>
+                <span class="tx"
+                  >中身はただのテキスト。<wbr />直した 1&nbsp;行だけが<wbr />変わる</span
+                >
+              </button>
+            </li>
+          </ol>
+          <figure class="stage">
             <video
+              id="player"
               src="clips/01-tools.webm"
               muted
               loop
               playsinline
-              preload="none"
-              aria-label="キー 1 つで道具を持ち替える"
+              autoplay
             ></video>
-            <h3><span class="no">01</span>キー 1 つで道具を持ち替える</h3>
-            <p class="how">T　R　O　L</p>
-          </li>
-          <li>
-            <video
-              src="clips/02-width.webm"
-              muted
-              loop
-              playsinline
-              preload="none"
-              aria-label="幅を 1/4・1/3・1/2・2/3・全幅にそろえる"
-            ></video>
-            <h3><span class="no">02</span>幅を 1/4・1/3・1/2・2/3・全幅にそろえる</h3>
-            <p class="how">⌥1 – ⌥5</p>
-          </li>
-          <li>
-            <video
-              src="clips/03-gap.webm"
-              muted
-              loop
-              playsinline
-              preload="none"
-              aria-label="すき間をつまむと、全部の間が一緒に変わる"
-            ></video>
-            <h3><span class="no">03</span>すき間をつまむと、全部の間が一緒に変わる</h3>
-            <p class="how">3 つ選んで、間のつまみを引く</p>
-          </li>
-          <li>
-            <video
-              src="clips/04-swap.webm"
-              muted
-              loop
-              playsinline
-              preload="none"
-              aria-label="引きずって入れ替える"
-            ></video>
-            <h3><span class="no">04</span>引きずって入れ替える</h3>
-            <p class="how">3 つ選んで、1 つを引く</p>
-          </li>
-          <li>
-            <video
-              src="clips/05-snap.webm"
-              muted
-              loop
-              playsinline
-              preload="none"
-              aria-label="隣と同じ間隔で止まる"
-            ></video>
-            <h3><span class="no">05</span>隣と同じ間隔で止まる</h3>
-            <p class="how">動かすだけ</p>
-          </li>
-          <li>
-            <video
-              src="clips/06-highlight.webm"
-              muted
-              loop
-              playsinline
-              preload="none"
-              aria-label="語を選んで、すぐ下で色を選ぶ"
-            ></video>
-            <h3><span class="no">06</span>語を選んで、すぐ下で色を選ぶ</h3>
-            <p class="how">文字を選ぶ</p>
-          </li>
-          <li>
-            <video
-              src="clips/07-math.webm"
-              muted
-              loop
-              playsinline
-              preload="none"
-              aria-label="$ で囲むと数式になる"
-            ></video>
-            <h3><span class="no">07</span>$ で囲むと数式になる</h3>
-            <p class="how">$x_1$ と打つ</p>
-          </li>
-          <li>
-            <video
-              src="clips/08-palette.webm"
-              muted
-              loop
-              playsinline
-              preload="none"
-              aria-label="部品を名前で呼ぶ"
-            ></video>
-            <h3><span class="no">08</span>部品を名前で呼ぶ</h3>
-            <p class="how">⌘K</p>
-          </li>
-          <li>
-            <video
-              src="clips/09-chapters.webm"
-              muted
-              loop
-              playsinline
-              preload="none"
-              aria-label="章ごと入れ替える。題は 1 か所直せば全部変わる"
-            ></video>
-            <h3><span class="no">09</span>章ごと入れ替える。題は 1 か所直せば全部変わる</h3>
-            <p class="how">章の見出しを引く・二重クリック</p>
-          </li>
-          <li>
-            <video
-              src="clips/10-appendix.webm"
-              muted
-              loop
-              playsinline
-              preload="none"
-              aria-label="付録へ送る"
-            ></video>
-            <h3><span class="no">10</span>付録へ送る</h3>
-            <p class="how">右クリック →「ほかの章へ移す」</p>
-          </li>
-          <li>
-            <video
-              src="clips/11-ai.webm"
-              muted
-              loop
-              playsinline
-              preload="none"
-              aria-label="AI に文で頼み、前後を見比べて適用する"
-            ></video>
-            <h3><span class="no">11</span>AI に文で頼み、前後を見比べて適用する</h3>
-            <p class="how">⌘J</p>
-          </li>
-          <li>
-            <video
-              src="clips/12-text.webm"
-              muted
-              loop
-              playsinline
-              preload="none"
-              aria-label="中身はただのテキスト。直した 1 行だけが変わる"
-            ></video>
-            <h3><span class="no">12</span>中身はただのテキスト。直した 1 行だけが変わる</h3>
-            <p class="how">slides.md</p>
-          </li>
-        </ol>
+            <figcaption class="cap"><kbd id="how">T　R　O　L</kbd></figcaption>
+          </figure>
+        </div>
       </section>
 
       <section id="text">
         <div class="two">
           <div>
-            <h2>保存されるのは、これだけ</h2>
-            <p class="sub">
-              独自の形式ではありません。1 枚のスライドは数行のテキストで、位置は「幅 1/2、左から
-              47%」のように読める形で入ります。
+            <h2>保存されるのは、<wbr />読めるテキスト</h2>
+            <p>
+              1&nbsp;枚のスライドは数行のテキストです。置いた位置も「幅 1/2、左から
+              47%」のように、読める形で入ります。
             </p>
+            <p>要素を動かすと、変わるのはその 1&nbsp;行だけ。ほかの行には触れません。</p>
           </div>
-          <pre><code># 貸出の傾向
-
-平日は夕方、休日は午前に集中する。
-
-&lt;div class="absolute w-1/2 left-[47%] top-[22%]"&gt;
-
-&lt;HighlightText variant="red"&gt;雨の日は 2 割増える&lt;/HighlightText&gt;
-
-&lt;/div&gt;</code></pre>
+          <pre><code><span># 貸出の傾向</span><span></span><span>平日は夕方、休日は午前に集中する。</span><span></span><span class="hl">&lt;div class="absolute w-1/2 left-[47%] top-[22%]"&gt;</span><span></span><span>&lt;HighlightText variant="red"&gt;雨の日は 2&nbsp;割増える&lt;/HighlightText&gt;</span><span></span><span>&lt;/div&gt;</span></code></pre>
         </div>
       </section>
 
-      <section id="start">
-        <h2>始め方</h2>
-        <p class="sub">新しく作ることも、今ある Slidev のフォルダを開くこともできます。</p>
-        <ol class="steps">
-          <li>
-            <h3>開く</h3>
-            <p>題と章立てを書いて新しく作るか、スライドのフォルダを選びます。</p>
-          </li>
-          <li>
-            <h3>直す</h3>
-            <p>文字は二重クリック。部品は ⌘K。迷ったら ⌘/ で一覧と動画が出ます。</p>
-          </li>
-          <li>
-            <h3>発表する・書き出す</h3>
-            <p>⌘Enter で発表。PDF・PowerPoint・画像は「書き出し」から。</p>
-          </li>
-        </ol>
+      <section id="more">
+        <h2>ほかにできること</h2>
+        <dl>
+          <dt>テーマの部品</dt>
+          <dd>
+            章の扉、ヘッダー、注意書き、数式、引用。テーマ
+            gtlabo&nbsp;の部品を、名前で呼んで置けます。
+          </dd>
+          <dt>AI&nbsp;に頼む</dt>
+          <dd>
+            手元の Claude
+            Code&nbsp;に文で頼めます。変更前と変更後を見比べてから、適用するかを決めます。
+          </dd>
+          <dt>Git&nbsp;で同期</dt>
+          <dd>ボタン 1&nbsp;つで、記録して、相手の変更を取り込み、送ります。</dd>
+          <dt>書き出し</dt>
+          <dd>PDF、PowerPoint（PPTX）、画像（PNG）に書き出せます。</dd>
+          <dt>今ある Slidev&nbsp;のフォルダ</dt>
+          <dd>そのまま開けます。何も直さずに保存しても、ファイルは 1&nbsp;文字も変わりません。</dd>
+        </dl>
+      </section>
+
+      <section id="get" class="get">
+        <h2>入手する</h2>
+        <p>Mac 版を準備しています。配布はまだ始まっていません。</p>
       </section>
     </main>
 
     <footer>
       <div class="wrap">
-        Slidev GUI は、オープンソースの Slidev
-        の上で動きます。このページの画面と動画の内容は架空のものです。
+        <p>
+          画面と動画の内容は架空のものです。Slidev GUI&nbsp;は、オープンソースの
+          Slidev&nbsp;の上で動きます。
+        </p>
       </div>
     </footer>
 
     <script>
-      // 画面に入った動画だけを再生する（音なし・繰り返し）。動きを減らす設定では、再生の操作部を出して自動では動かさない
       ;(function () {
-        var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        var vs = document.querySelectorAll('video')
-        if (still || !('IntersectionObserver' in window)) {
-          vs.forEach(function (v) {
-            v.removeAttribute('autoplay')
-            v.pause()
-            v.controls = true
-            v.preload = 'metadata'
-          })
-          return
+        // 一覧を押すと、右の動画を差し替えて最初から再生する（音なし・繰り返し。再生ボタンは出さない）
+        var player = document.getElementById('player')
+        var how = document.getElementById('how')
+        var base = player.getAttribute('src').replace(/[^/]+$/, '')
+        var buttons = document.querySelectorAll('.clip')
+        function play(v) {
+          v.muted = true
+          var p = v.play()
+          if (p && p.catch) p.catch(function () {})
         }
-        var io = new IntersectionObserver(
-          function (es) {
-            es.forEach(function (e) {
-              if (e.isIntersecting) e.target.play().catch(function () {})
-              else e.target.pause()
+        buttons.forEach(function (b) {
+          b.addEventListener('click', function () {
+            buttons.forEach(function (x) {
+              x.setAttribute('aria-pressed', x === b ? 'true' : 'false')
             })
-          },
-          { threshold: 0.35 }
-        )
-        vs.forEach(function (v) {
-          io.observe(v)
+            player.setAttribute('src', base + b.dataset.clip + '.webm')
+            player.setAttribute('aria-label', b.querySelector('.tx').textContent)
+            how.textContent = b.dataset.how
+            player.load()
+            play(player)
+          })
         })
+        player.setAttribute('aria-label', buttons[0].querySelector('.tx').textContent)
+        // 自動再生が始まらなかったとき（タブを裏で開いた・省電力など）は、見えたとき・最初の操作でもう一度始める
+        var videos = document.querySelectorAll('video')
+        function kick() {
+          videos.forEach(function (v) {
+            if (v.paused) play(v)
+          })
+        }
+        kick()
+        document.addEventListener('visibilitychange', function () {
+          if (!document.hidden) kick()
+        })
+        ;['pointerdown', 'keydown', 'scroll'].forEach(function (t) {
+          window.addEventListener(t, kick, { once: true, passive: true })
+        })
+
+        var copy = document.getElementById('copy')
+        if (copy)
+          copy.addEventListener('click', function () {
+            var text = document.getElementById('cmd').textContent
+            var done = function () {
+              copy.textContent = 'コピーしました'
+              setTimeout(function () {
+                copy.textContent = 'コピー'
+              }, 1600)
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText)
+              navigator.clipboard.writeText(text).then(done, function () {})
+            else {
+              var r = document.createRange()
+              r.selectNodeContents(document.getElementById('cmd'))
+              var s = getSelection()
+              s.removeAllRanges()
+              s.addRange(r)
+            }
+          })
       })()
     </script>
   </body>
