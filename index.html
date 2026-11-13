@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Slidev GUI — スライドを、見たまま直す。中身はテキストのまま。</title>
+    <meta
+      name="description"
+      content="PowerPoint のように見たまま直せて、保存されるのは読めるテキスト（slides.md）。Slidev のための GUI エディタ。"
+    />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --ink: #111111;
+        --muted: #595959;
+        --line: #e0e0e0;
+        --sunk: #f2f2f2;
+        /* 差し色とフォントは仮（アプリの CSS 変数と同じ値。ここを変えれば全体が変わる） */
+        --accent: #0047ab;
+        --on-accent: #ffffff;
+        --font: 'Inter', 'Hiragino Sans', 'Yu Gothic UI', 'Noto Sans JP', system-ui, sans-serif;
+        --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+        --radius: 6px;
+        --w: 1120px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: var(--font);
+        font-size: 16px;
+        line-height: 1.7;
+      }
+      .wrap {
+        max-width: var(--w);
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      header.top {
+        border-bottom: 1px solid var(--line);
+      }
+      header.top .wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 56px;
+      }
+      header.top b {
+        font-size: 16px;
+      }
+      header.top nav {
+        display: flex;
+        gap: 24px;
+      }
+      a {
+        color: var(--ink);
+        text-underline-offset: 3px;
+      }
+      header.top a {
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        font-size: 14px;
+        text-decoration: none;
+      }
+      header.top a:hover {
+        text-decoration: underline;
+      }
+      a:focus-visible,
+      video:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        gap: 48px;
+        align-items: center;
+        padding: 72px 0 64px;
+      }
+      h1 {
+        margin: 0 0 24px;
+        font-size: 44px;
+        line-height: 1.25;
+        letter-spacing: -0.01em;
+      }
+      .lead {
+        margin: 0 0 32px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+      .status {
+        display: inline-block;
+        margin: 0;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        color: var(--muted);
+        font-size: 14px;
+      }
+      video {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 10;
+        object-fit: contain;
+        background: var(--sunk);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+      }
+      section {
+        padding: 64px 0;
+        border-top: 1px solid var(--line);
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        line-height: 1.35;
+      }
+      .sub {
+        margin: 0 0 40px;
+        color: var(--muted);
+      }
+      .points {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 32px 48px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .points h3 {
+        margin: 0 0 8px;
+        padding-top: 16px;
+        border-top: 2px solid var(--ink);
+        font-size: 18px;
+        line-height: 1.4;
+      }
+      .points p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .clips {
+        display: grid;
+        /* 動画の中の字が読める大きさにするため 2 列 */
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 48px 32px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .clips h3 {
+        display: flex;
+        gap: 8px;
+        margin: 12px 0 4px;
+        font-size: 16px;
+        line-height: 1.45;
+      }
+      .no {
+        flex: none;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-weight: 400;
+      }
+      .how {
+        margin: 0 0 0 28px;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 48px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        counter-reset: s;
+      }
+      .steps li {
+        counter-increment: s;
+      }
+      .steps li::before {
+        content: counter(s);
+        display: block;
+        margin-bottom: 8px;
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .steps h3 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+      .steps p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      pre {
+        margin: 0;
+        padding: 20px 24px;
+        overflow-x: auto;
+        background: var(--sunk);
+        border-radius: var(--radius);
+        font-family: var(--mono);
+        font-size: 14px;
+        line-height: 1.7;
+      }
+      .two {
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        gap: 48px;
+        align-items: start;
+      }
+      footer {
+        padding: 32px 0 48px;
+        border-top: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      @media (max-width: 860px) {
+        .hero,
+        .two,
+        .points,
+        .clips,
+        .steps {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .hero {
+          padding: 40px 0;
+          gap: 32px;
+        }
+        h1 {
+          font-size: 32px;
+        }
+        section {
+          padding: 48px 0;
+        }
+        header.top nav a:not(:last-child) {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <b>Slidev GUI</b>
+        <nav aria-label="このページの中">
+          <a href="#points">できること</a>
+          <a href="#clips">工夫</a>
+          <a href="#start">始め方</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <div class="hero">
+        <div>
+          <h1>スライドを、見たまま直す。<br />中身はテキストのまま。</h1>
+          <p class="lead">
+            PowerPoint と同じように、置いて、動かして、その場で書く。保存されるのは、人にも AI
+            にも読める 1 つのテキスト。
+          </p>
+          <p class="status">Mac 版を準備中です（配布はまだ始まっていません）</p>
+        </div>
+        <video
+          src="clips/03-gap.webm"
+          muted
+          loop
+          playsinline
+          autoplay
+          aria-label="すき間をつまむと、全部の間が一緒に変わる"
+        ></video>
+      </div>
+
+      <section id="points">
+        <h2>できること</h2>
+        <p class="sub">PowerPoint の操作感に、テキストの良さを足しました。</p>
+        <ul class="points">
+          <li>
+            <h3>見たまま、その場で直す</h3>
+            <p>発表で映る画面そのものの上で、文字を書き、図形を置き、引いて動かします。</p>
+          </li>
+          <li>
+            <h3>中身は 1 つのテキスト</h3>
+            <p>
+              保存されるのは slides.md。直した所だけが変わるので、変更の履歴が読め、ほかのエディタや
+              AI と一緒に使えます。
+            </p>
+          </li>
+          <li>
+            <h3>研究室のテーマをそのまま</h3>
+            <p>章の扉、ヘッダー、強調、数式、引用。テーマ gtlabo の部品を名前で呼んで置けます。</p>
+          </li>
+          <li>
+            <h3>章で扱う</h3>
+            <p>章ごと入れ替える、付録へ送る、章の題を 1 か所で直す。長い発表でも迷いません。</p>
+          </li>
+          <li>
+            <h3>AI に頼んで、見比べてから決める</h3>
+            <p>文で頼むと、変更前と変更後が並びます。良ければ適用、違えばやめるだけ。</p>
+          </li>
+          <li>
+            <h3>PDF・PowerPoint・画像に書き出す</h3>
+            <p>配る資料や、PowerPoint が必要な場面にも、そのまま出せます。</p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="clips">
+        <h2>PowerPoint には無い、12 の工夫</h2>
+        <p class="sub">どれも数秒です。動画は、実際のアプリを動かして録ったものです。</p>
+        <ol class="clips">
+          <li>
+            <video
+              src="clips/01-tools.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="キー 1 つで道具を持ち替える"
+            ></video>
+            <h3><span class="no">01</span>キー 1 つで道具を持ち替える</h3>
+            <p class="how">T　R　O　L</p>
+          </li>
+          <li>
+            <video
+              src="clips/02-width.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="幅を 1/4・1/3・1/2・2/3・全幅にそろえる"
+            ></video>
+            <h3><span class="no">02</span>幅を 1/4・1/3・1/2・2/3・全幅にそろえる</h3>
+            <p class="how">⌥1 – ⌥5</p>
+          </li>
+          <li>
+            <video
+              src="clips/03-gap.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="すき間をつまむと、全部の間が一緒に変わる"
+            ></video>
+            <h3><span class="no">03</span>すき間をつまむと、全部の間が一緒に変わる</h3>
+            <p class="how">3 つ選んで、間のつまみを引く</p>
+          </li>
+          <li>
+            <video
+              src="clips/04-swap.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="引きずって入れ替える"
+            ></video>
+            <h3><span class="no">04</span>引きずって入れ替える</h3>
+            <p class="how">3 つ選んで、1 つを引く</p>
+          </li>
+          <li>
+            <video
+              src="clips/05-snap.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="隣と同じ間隔で止まる"
+            ></video>
+            <h3><span class="no">05</span>隣と同じ間隔で止まる</h3>
+            <p class="how">動かすだけ</p>
+          </li>
+          <li>
+            <video
+              src="clips/06-highlight.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="語を選んで、すぐ下で色を選ぶ"
+            ></video>
+            <h3><span class="no">06</span>語を選んで、すぐ下で色を選ぶ</h3>
+            <p class="how">文字を選ぶ</p>
+          </li>
+          <li>
+            <video
+              src="clips/07-math.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="$ で囲むと数式になる"
+            ></video>
+            <h3><span class="no">07</span>$ で囲むと数式になる</h3>
+            <p class="how">$x_1$ と打つ</p>
+          </li>
+          <li>
+            <video
+              src="clips/08-palette.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="部品を名前で呼ぶ"
+            ></video>
+            <h3><span class="no">08</span>部品を名前で呼ぶ</h3>
+            <p class="how">⌘K</p>
+          </li>
+          <li>
+            <video
+              src="clips/09-chapters.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="章ごと入れ替える。題は 1 か所直せば全部変わる"
+            ></video>
+            <h3><span class="no">09</span>章ごと入れ替える。題は 1 か所直せば全部変わる</h3>
+            <p class="how">章の見出しを引く・二重クリック</p>
+          </li>
+          <li>
+            <video
+              src="clips/10-appendix.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="付録へ送る"
+            ></video>
+            <h3><span class="no">10</span>付録へ送る</h3>
+            <p class="how">右クリック →「ほかの章へ移す」</p>
+          </li>
+          <li>
+            <video
+              src="clips/11-ai.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="AI に文で頼み、前後を見比べて適用する"
+            ></video>
+            <h3><span class="no">11</span>AI に文で頼み、前後を見比べて適用する</h3>
+            <p class="how">⌘J</p>
+          </li>
+          <li>
+            <video
+              src="clips/12-text.webm"
+              muted
+              loop
+              playsinline
+              preload="none"
+              aria-label="中身はただのテキスト。直した 1 行だけが変わる"
+            ></video>
+            <h3><span class="no">12</span>中身はただのテキスト。直した 1 行だけが変わる</h3>
+            <p class="how">slides.md</p>
+          </li>
+        </ol>
+      </section>
+
+      <section id="text">
+        <div class="two">
+          <div>
+            <h2>保存されるのは、これだけ</h2>
+            <p class="sub">
+              独自の形式ではありません。1 枚のスライドは数行のテキストで、位置は「幅 1/2、左から
+              47%」のように読める形で入ります。
+            </p>
+          </div>
+          <pre><code># 貸出の傾向
+
+平日は夕方、休日は午前に集中する。
+
+&lt;div class="absolute w-1/2 left-[47%] top-[22%]"&gt;
+
+&lt;HighlightText variant="red"&gt;雨の日は 2 割増える&lt;/HighlightText&gt;
+
+&lt;/div&gt;</code></pre>
+        </div>
+      </section>
+
+      <section id="start">
+        <h2>始め方</h2>
+        <p class="sub">新しく作ることも、今ある Slidev のフォルダを開くこともできます。</p>
+        <ol class="steps">
+          <li>
+            <h3>開く</h3>
+            <p>題と章立てを書いて新しく作るか、スライドのフォルダを選びます。</p>
+          </li>
+          <li>
+            <h3>直す</h3>
+            <p>文字は二重クリック。部品は ⌘K。迷ったら ⌘/ で一覧と動画が出ます。</p>
+          </li>
+          <li>
+            <h3>発表する・書き出す</h3>
+            <p>⌘Enter で発表。PDF・PowerPoint・画像は「書き出し」から。</p>
+          </li>
+        </ol>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        Slidev GUI は、オープンソースの Slidev
+        の上で動きます。このページの画面と動画の内容は架空のものです。
+      </div>
+    </footer>
+
+    <script>
+      // 画面に入った動画だけを再生する（音なし・繰り返し）。動きを減らす設定では、再生の操作部を出して自動では動かさない
+      ;(function () {
+        var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        var vs = document.querySelectorAll('video')
+        if (still || !('IntersectionObserver' in window)) {
+          vs.forEach(function (v) {
+            v.removeAttribute('autoplay')
+            v.pause()
+            v.controls = true
+            v.preload = 'metadata'
+          })
+          return
+        }
+        var io = new IntersectionObserver(
+          function (es) {
+            es.forEach(function (e) {
+              if (e.isIntersecting) e.target.play().catch(function () {})
+              else e.target.pause()
+            })
+          },
+          { threshold: 0.35 }
+        )
+        vs.forEach(function (v) {
+          io.observe(v)
+        })
+      })()
+    </script>
+  </body>
+</html>
