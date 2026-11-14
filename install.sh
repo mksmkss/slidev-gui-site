@@ -2,6 +2,7 @@
 # Slidev GUI を Mac に入れる（紹介のページの 1 行から呼ばれる）。
 #   curl -fsSL https://mksmkss.github.io/slidev-gui-site/install.sh | sh
 # すること: 配布物（zip）とその SHA-256 を取り、照合してから「アプリケーション」に置く。ほかの場所は触らない。
+# 変数の直後に全角の文字が続くところは ${VAR} と書く（sh が変数名を読み違えて止まる）。
 # 管理者の権限（sudo）は使わない。/Applications に書けないときは ~/Applications に置く。
 set -eu
 
@@ -26,9 +27,9 @@ ZIP="slidev-gui-$ARCH-mac.zip"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/slidev-gui-install.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT INT TERM
 
-say "Slidev GUI（$ARCH）を取ってきます…"
+say "Slidev GUI（${ARCH}）を取ってきます…"
 curl -fL --proto '=https' --tlsv1.2 --progress-bar -o "$TMP/$ZIP" "$BASE/$ZIP" ||
-  die "ダウンロードできませんでした（$BASE/$ZIP）"
+  die "ダウンロードできませんでした（$BASE/${ZIP}）"
 curl -fsSL --proto '=https' --tlsv1.2 -o "$TMP/SHA256SUMS" "$BASE/SHA256SUMS" ||
   die "照合用のファイルを取れませんでした"
 
