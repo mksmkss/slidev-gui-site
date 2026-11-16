@@ -209,6 +209,49 @@
         font-size: 13px;
       }
 
+
+      /* 12 の操作（広い幅）: 全部を格子で並べる。選ぶ操作は要らない。狭い幅では上の「選んで見る」形を使う */
+      .grid {
+        display: none;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 40px 32px;
+      }
+      .grid li {
+        min-width: 0;
+      }
+      .grid .t {
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        margin: 12px 0 0;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.5;
+      }
+      .grid .how {
+        margin: 4px 0 0 calc(1.6em + 12px);
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 13px;
+      }
+      /* 格子はスクリプトが作る。作れたとき（html に has-grid が付いたとき）だけ切り替える（作れなければ、選んで見る形のまま） */
+      @media (min-width: 861px) {
+        .has-grid .viewer {
+          display: none;
+        }
+        .has-grid .grid {
+          display: grid;
+        }
+      }
+      @media (min-width: 861px) and (max-width: 1100px) {
+        .has-grid .grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
       /* 中身: 文と、保存されるテキスト */
       .two {
         display: grid;
@@ -566,6 +609,7 @@
             <figcaption class="cap"><kbd id="how">T　R　O　L</kbd></figcaption>
           </figure>
         </div>
+        <ol class="grid" id="grid"></ol>
       </section>
 
       <section id="text">
@@ -652,11 +696,67 @@
           })
         })
         player.setAttribute('aria-label', buttons[0].querySelector('.tx').textContent)
+        // 広い幅: 12 個を格子で全部並べる（一覧のボタンの題・キーから作る）。
+        // 画面に入ったものだけ再生し、外れたら止める。動きを減らす設定のときは自動再生せず、押して再生する
+        var grid = document.getElementById('grid')
+        var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        var cells = []
+        buttons.forEach(function (b) {
+          var li = document.createElement('li')
+          var v = document.createElement('video')
+          v.muted = true
+          v.loop = true
+          v.setAttribute('playsinline', '')
+          v.preload = 'none'
+          v.dataset.src = base + b.dataset.clip + '.webm'
+          v.setAttribute('aria-label', b.querySelector('.tx').textContent)
+          if (still) v.controls = true
+          var t = document.createElement('p')
+          t.className = 't'
+          var no = document.createElement('span')
+          no.className = 'no'
+          no.textContent = b.querySelector('.no').textContent
+          var tx = document.createElement('span')
+          tx.innerHTML = b.querySelector('.tx').innerHTML
+          t.appendChild(no)
+          t.appendChild(tx)
+          var h = document.createElement('p')
+          h.className = 'how'
+          h.textContent = b.dataset.how
+          li.appendChild(v)
+          li.appendChild(t)
+          li.appendChild(h)
+          grid.appendChild(li)
+          cells.push(v)
+        })
+        if (cells.length) document.documentElement.classList.add('has-grid')
+        if (!still && 'IntersectionObserver' in window) {
+          var io = new IntersectionObserver(
+            function (entries) {
+              entries.forEach(function (e) {
+                var v = e.target
+                if (e.isIntersecting) {
+                  if (!v.getAttribute('src')) v.setAttribute('src', v.dataset.src)
+                  play(v)
+                } else if (!v.paused) v.pause()
+              })
+            },
+            { threshold: 0.25 }
+          )
+          cells.forEach(function (v) {
+            io.observe(v)
+          })
+        } else
+          cells.forEach(function (v) {
+            v.setAttribute('src', v.dataset.src)
+            v.preload = 'metadata'
+            v.controls = true
+          })
         // 自動再生が始まらなかったとき（タブを裏で開いた・省電力など）は、見えたとき・最初の操作でもう一度始める
-        var videos = document.querySelectorAll('video')
+        var videos = [document.querySelector('.hero video'), player]
         function kick() {
           videos.forEach(function (v) {
-            if (v.paused) play(v)
+            if (v.paused && v.offsetParent) play(v)
           })
         }
         kick()
